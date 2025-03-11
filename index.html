@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📌 2-4반 공지 & 급식표</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <h1>📌 2-4반 <span id="ddayDisplay">(D-0)</span></h1>
+        <p id="currentDate"></p>
+    </header>
+
+    <section id="exam-dday">
+        <h2>📝 시험 D-Day 설정</h2>
+        <input type="date" id="examDateInput">
+        <button id="setExamDateButton" onclick="setExamDate()">설정</button>
+    </section>
+
+    <section id="notice-board">
+        <h2>📢 공지사항</h2>
+        <ul id="notices"></ul>
+        <div id="editSection">
+            <input type="text" id="noticeInput" placeholder="공지 추가하기">
+            <button onclick="addNotice()">추가</button>
+        </div>
+    </section>
+
+    <section id="lunch-menu">
+        <h2>🍽 급식표</h2>
+        <p id="menuDisplay"></p>
+        <div id="editSection">
+            <textarea id="menuInput" placeholder="급식표 내용을 입력하세요"></textarea>
+            <button onclick="updateMenu()">업데이트</button>
+            <button onclick="deleteMenu()">삭제</button>
+        </div>
+    </section>
+
+    <section id="suggestions">
+        <h2>💡 건의사항 (비공개)</h2>
+        <ul id="suggestionList" style="display: none;"></ul>
+        <div class="input-box">
+            <input type="text" id="suggestionInput" placeholder="건의사항 입력">
+            <button onclick="submitSuggestion()">제출</button>
+        </div>
+        <div id="adminSection">
+            <input type="password" id="passwordInput" placeholder="비밀번호 입력">
+            <button onclick="showSuggestions()">확인</button>
+        </div>
+    </section>
+
+    <script src="script.js"></script>
+</body>
+</html>
