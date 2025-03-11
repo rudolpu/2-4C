@@ -1,37 +1,44 @@
+// ✅ 수정 가능한 관리자 IP 설정 (여기에 네 실제 IP 주소 입력)
+const allowedIP = "XXX.XXX.XXX.XXX";  // 여기에 관리자 IP 입력
+
 // 기본 상태: 읽기 모드
 let isAdmin = false;
 
-// 로그인 기능
-function adminLogin() {
-    let username = prompt("아이디를 입력하세요:");
-    let password = prompt("비밀번호를 입력하세요:");
-    if (username === "admin" && password === "password123") {  // 원하는 아이디 & 비밀번호 설정 가능
-        isAdmin = true;
-        alert("관리자 모드로 변경되었습니다!");
-        localStorage.setItem("isAdmin", "true");
-        showAdminFeatures();
-    } else {
-        alert("아이디 또는 비밀번호가 틀렸습니다.");
-    }
-}
-
-// 로그아웃 기능
-function adminLogout() {
-    isAdmin = false;
-    alert("읽기 모드로 변경되었습니다!");
-    localStorage.removeItem("isAdmin");
-    showAdminFeatures();
+// 사용자의 IP 가져오기
+function checkUserIP() {
+    fetch("https://api64.ipify.org?format=json")  // 외부 API에서 IP 가져오기
+        .then(response => response.json())
+        .then(data => {
+            if (data.ip === allowedIP) {
+                isAdmin = true;
+                localStorage.setItem("isAdmin", "true");
+            } else {
+                isAdmin = false;
+                localStorage.removeItem("isAdmin");
+            }
+            showAdminFeatures();
+        })
+        .catch(error => console.error("IP 확인 오류:", error));
 }
 
 // 관리자 모드 UI 활성화 / 비활성화
 function showAdminFeatures() {
     if (localStorage.getItem("isAdmin") === "true") {
         document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'block');
-        isAdmin = true;
     } else {
         document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'none');
-        isAdmin = false;
     }
+}
+
+// 공지, 급식표 수정 기능 비활성화 (건의 사항 제외)
+function disableEdits() {
+    document.getElementById("noticeInput").disabled = !isAdmin;
+    document.getElementById("menuInput").disabled = !isAdmin;
+    document.getElementById("examDateInput").disabled = !isAdmin;
+
+    document.querySelectorAll(".admin-only").forEach(el => {
+        el.style.display = isAdmin ? "block" : "none";
+    });
 }
 
 // D-Day 계산 및 표시
@@ -43,11 +50,7 @@ function updateDday() {
         let timeDiff = examDate.getTime() - today.getTime();
         let daysLeft = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
 
-        if (daysLeft >= 0) {
-            document.getElementById("ddayDisplay").textContent = "(D-" + daysLeft + ")";
-        } else {
-            document.getElementById("ddayDisplay").textContent = "(시험 종료)";
-        }
+        document.getElementById("ddayDisplay").textContent = daysLeft >= 0 ? "(D-" + daysLeft + ")" : "(시험 종료)";
     }
 }
 
@@ -106,7 +109,7 @@ function deleteMenu() {
     document.getElementById("menuDisplay").textContent = "";
 }
 
-// 건의사항 추가 (모두 가능) & 삭제 (관리자만 가능)
+// 건의 사항 추가 (누구나 가능) & 삭제 (관리자만 가능)
 function submitSuggestion() {
     let input = document.getElementById("suggestionInput").value;
     if (input.trim() !== "") {
@@ -136,10 +139,12 @@ function deleteSuggestion(index) {
     displaySuggestions();
 }
 
+// 페이지 로드 시 실행
 window.onload = function () {
+    checkUserIP(); // IP 확인
     updateDday();
     displayNotices();
     displaySuggestions();
     document.getElementById("menuDisplay").textContent = localStorage.getItem("menuText") || "";
-    showAdminFeatures();
+    disableEdits();
 };
