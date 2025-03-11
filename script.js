@@ -1,49 +1,80 @@
-// ✅ 수정 가능한 관리자 IP 설정 (여기에 네 실제 IP 주소 입력)
-const allowedIP = "XXX.XXX.XXX.XXX";  // 여기에 관리자 IP 입력
+const API_URL = "https://script.google.com/macros/s/AKfycbyz0XDGujBH5VEGYbwq3aYX7PJgbubd5IvPZFNpinxBJSiHbNxNoOGpp10SRiElDGhafg/exec";
 
 // 기본 상태: 읽기 모드
 let isAdmin = false;
 
-// 사용자의 IP 가져오기
-function checkUserIP() {
-    fetch("https://api64.ipify.org?format=json")  // 외부 API에서 IP 가져오기
-        .then(response => response.json())
-        .then(data => {
-            if (data.ip === allowedIP) {
-                isAdmin = true;
-                localStorage.setItem("isAdmin", "true");
-            } else {
-                isAdmin = false;
-                localStorage.removeItem("isAdmin");
-            }
-            showAdminFeatures();
-        })
-        .catch(error => console.error("IP 확인 오류:", error));
+// 로그인 기능
+function adminLogin() {
+    let username = prompt("아이디를 입력하세요:");
+    let password = prompt("비밀번호를 입력하세요:");
+    if (username === "admin" && password === "password123") {  // 원하는 아이디 & 비밀번호 설정 가능
+        isAdmin = true;
+        alert("관리자 모드로 변경되었습니다!");
+        localStorage.setItem("isAdmin", "true");
+        showAdminFeatures();
+    } else {
+        alert("아이디 또는 비밀번호가 틀렸습니다.");
+    }
+}
+
+// 로그아웃 기능
+function adminLogout() {
+    isAdmin = false;
+    alert("읽기 모드로 변경되었습니다!");
+    localStorage.removeItem("isAdmin");
+    showAdminFeatures();
 }
 
 // 관리자 모드 UI 활성화 / 비활성화
 function showAdminFeatures() {
     if (localStorage.getItem("isAdmin") === "true") {
         document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'block');
+        isAdmin = true;
     } else {
         document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'none');
+        isAdmin = false;
     }
 }
 
-// 공지, 급식표 수정 기능 비활성화 (건의 사항 제외)
-function disableEdits() {
-    document.getElementById("noticeInput").disabled = !isAdmin;
-    document.getElementById("menuInput").disabled = !isAdmin;
-    document.getElementById("examDateInput").disabled = !isAdmin;
-
-    document.querySelectorAll(".admin-only").forEach(el => {
-        el.style.display = isAdmin ? "block" : "none";
-    });
+// 데이터 불러오기 (Google Sheets에서)
+function loadData() { 
+    fetch(API_URL)
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById("noticeDisplay").textContent = data.notice || "공지 없음";
+            document.getElementById("menuDisplay").textContent = data.lunch || "급식표 없음";
+            document.getElementById("ddayDisplay").textContent = data.dday || "D-Day 없음";
+        })
+        .catch(error => console.error("데이터 불러오기 오류:", error));
 }
 
-// D-Day 계산 및 표시
+// 데이터 저장 (Google Sheets에 저장, 관리자만 가능)
+function saveData() {
+    if (!isAdmin) return alert("관리자만 수정할 수 있습니다!");
+    if (!confirm("정말 저장하시겠습니까?")) return;
+
+    const newData = {
+        notice: document.getElementById("noticeInput").value,
+        lunch: document.getElementById("menuInput").value,
+        dday: document.getElementById("examDateInput").value
+    };
+
+    fetch(API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newData)
+    })
+    .then(response => response.text())
+    .then(result => {
+        alert("데이터가 저장되었습니다!");
+        loadData();  // 저장 후 데이터 다시 불러오기
+    })
+    .catch(error => console.error("데이터 저장 오류:", error));
+}
+
+// 시험 D-Day 설정
 function updateDday() {
-    let examDateStr = localStorage.getItem("examDate");
+    let examDateStr = document.getElementById("examDateInput").value;
     if (examDateStr) {
         let examDate = new Date(examDateStr);
         let today = new Date();
@@ -54,97 +85,8 @@ function updateDday() {
     }
 }
 
-function setExamDate() {
-    if (!isAdmin) return;
-    let inputDate = document.getElementById("examDateInput").value;
-    if (inputDate) {
-        localStorage.setItem("examDate", inputDate);
-        updateDday();
-    }
-}
-
-// 공지 추가 & 삭제 (관리자만 가능)
-function addNotice() {
-    if (!isAdmin) return;
-    let input = document.getElementById("noticeInput").value;
-    if (input.trim() !== "") {
-        let notices = JSON.parse(localStorage.getItem("notices")) || [];
-        notices.push(input);
-        localStorage.setItem("notices", JSON.stringify(notices));
-        displayNotices();
-        document.getElementById("noticeInput").value = "";
-    }
-}
-
-function deleteNotice(index) {
-    if (!isAdmin) return;
-    let notices = JSON.parse(localStorage.getItem("notices")) || [];
-    notices.splice(index, 1);
-    localStorage.setItem("notices", JSON.stringify(notices));
-    displayNotices();
-}
-
-function displayNotices() {
-    let notices = JSON.parse(localStorage.getItem("notices")) || [];
-    let noticeList = document.getElementById("notices");
-    noticeList.innerHTML = "";
-    notices.forEach((notice, index) => {
-        let li = document.createElement("li");
-        li.innerHTML = notice + (isAdmin ? " <button onclick='deleteNotice(" + index + ")'>삭제</button>" : "");
-        noticeList.appendChild(li);
-    });
-}
-
-// 급식표 추가 & 삭제 (관리자만 가능)
-function updateMenu() {
-    if (!isAdmin) return;
-    let menuText = document.getElementById("menuInput").value;
-    localStorage.setItem("menuText", menuText);
-    document.getElementById("menuDisplay").textContent = menuText;
-}
-
-function deleteMenu() {
-    if (!isAdmin) return;
-    localStorage.removeItem("menuText");
-    document.getElementById("menuDisplay").textContent = "";
-}
-
-// 건의 사항 추가 (누구나 가능) & 삭제 (관리자만 가능)
-function submitSuggestion() {
-    let input = document.getElementById("suggestionInput").value;
-    if (input.trim() !== "") {
-        let suggestions = JSON.parse(localStorage.getItem("suggestions")) || [];
-        suggestions.push(input);
-        localStorage.setItem("suggestions", JSON.stringify(suggestions));
-        document.getElementById("suggestionInput").value = "";
-    }
-}
-
-function displaySuggestions() {
-    let suggestions = JSON.parse(localStorage.getItem("suggestions")) || [];
-    let suggestionList = document.getElementById("suggestionList");
-    suggestionList.innerHTML = "";
-    suggestions.forEach((suggestion, index) => {
-        let li = document.createElement("li");
-        li.innerHTML = suggestion + (isAdmin ? " <button onclick='deleteSuggestion(" + index + ")'>삭제</button>" : "");
-        suggestionList.appendChild(li);
-    });
-}
-
-function deleteSuggestion(index) {
-    if (!isAdmin) return;
-    let suggestions = JSON.parse(localStorage.getItem("suggestions")) || [];
-    suggestions.splice(index, 1);
-    localStorage.setItem("suggestions", JSON.stringify(suggestions));
-    displaySuggestions();
-}
-
-// 페이지 로드 시 실행
+// 페이지 로드 시 데이터 불러오기
 window.onload = function () {
-    checkUserIP(); // IP 확인
-    updateDday();
-    displayNotices();
-    displaySuggestions();
-    document.getElementById("menuDisplay").textContent = localStorage.getItem("menuText") || "";
-    disableEdits();
+    loadData();
+    showAdminFeatures();
 };
